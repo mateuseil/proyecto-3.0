@@ -225,7 +225,36 @@ function resetDardos(){ targets=[]; scoreD=0; for(let i=0;i<6;i++){targets.push(
   vy:(Math.random()*1-0.5)
 });
 } }
-canvasD.addEventListener('pointerdown', (e)=>{ const r=canvasD.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top; for(let i=targets.length-1;i>=0;i--){if(Math.hypot(targets[i].x-x,targets[i].y-y) < targets[i].r){ targets.splice(i,1); scoreD++; if(scoreD>=5){ done.g1=true; document.getElementById('toGame2').disabled=false; checkDone(); } break; } } });
+function handleInputD(e){
+  e.preventDefault();
+
+  const r = canvasD.getBoundingClientRect();
+  const scaleX = canvasD.width / r.width;
+  const scaleY = canvasD.height / r.height;
+
+  const clientX = e.clientX ?? e.touches?.[0].clientX;
+  const clientY = e.clientY ?? e.touches?.[0].clientY;
+
+  const x = (clientX - r.left) * scaleX;
+  const y = (clientY - r.top) * scaleY;
+
+  for(let i=targets.length-1;i>=0;i--){
+    if(Math.hypot(targets[i].x-x, targets[i].y-y) < targets[i].r){
+      targets.splice(i,1);
+      scoreD++;
+      if(scoreD>=5){
+        done.g1=true;
+        document.getElementById('toGame2').disabled=false;
+        checkDone();
+      }
+      break;
+    }
+  }
+}
+
+canvasD.addEventListener('pointerdown', handleInputD);
+canvasD.addEventListener('touchstart', handleInputD);
+
 function animD(){ dctx.clearRect(0,0,canvasD.width,canvasD.height); targets.forEach(t=>{ t.x+=t.vx*2; t.y+=Math.sin(Date.now()/600 + t.x/50)*0.6 + t.vy; if(t.x<30||t.x>canvasD.width-30) t.vx*=-1; if(t.y<30||t.y>canvasD.height-30) t.vy*=-1; dctx.beginPath(); dctx.arc(t.x,t.y,t.r,0,Math.PI*2); dctx.fillStyle='rgba(255,80,80,0.95)'; dctx.fill(); dctx.strokeStyle='white'; dctx.stroke(); }); requestAnimationFrame(animD);} resetDardos(); animD();
 
 // === GAME 2: GLOBOS (suben con zigzag) ===
@@ -239,7 +268,36 @@ function spawnBalloon(){ balloons.push({
 });
  }
 for(let i=0;i<10;i++) spawnBalloon();
-canvasG.addEventListener('pointerdown',(e)=>{ const r=canvasG.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top; for(let i=balloons.length-1;i>=0;i--){ if(Math.hypot(balloons[i].x-x,balloons[i].y-y) < balloons[i].r){ balloons.splice(i,1); scoreG++; if(scoreG>=10){ done.g2=true; document.getElementById('toGame3').disabled=false; checkDone(); } break; } } });
+function handleInputG(e){
+  e.preventDefault();
+
+  const r = canvasG.getBoundingClientRect();
+  const scaleX = canvasG.width / r.width;
+  const scaleY = canvasG.height / r.height;
+
+  const clientX = e.clientX ?? e.touches?.[0].clientX;
+  const clientY = e.clientY ?? e.touches?.[0].clientY;
+
+  const x = (clientX - r.left) * scaleX;
+  const y = (clientY - r.top) * scaleY;
+
+  for(let i=balloons.length-1;i>=0;i--){
+    if(Math.hypot(balloons[i].x-x, balloons[i].y-y) < balloons[i].r){
+      balloons.splice(i,1);
+      scoreG++;
+      if(scoreG>=10){
+        done.g2=true;
+        document.getElementById('toGame3').disabled=false;
+        checkDone();
+      }
+      break;
+    }
+  }
+}
+
+canvasG.addEventListener('pointerdown', handleInputG);
+canvasG.addEventListener('touchstart', handleInputG);
+
 function animG(){ gctx.clearRect(0,0,canvasG.width,canvasG.height); if(Math.random()<0.01) spawnBalloon(); balloons.forEach(b=>{ b.y -= b.speed; b.x += Math.sin(b.phase + b.y/30)*1.2; b.phase += 0.02; gctx.beginPath(); gctx.ellipse(b.x,b.y,b.r,b.r*1.25,0,0,Math.PI*2); gctx.fillStyle='rgba(255,150,200,0.95)'; gctx.fill(); gctx.strokeStyle='white'; gctx.stroke(); }); requestAnimationFrame(animG);} animG();
 
 // === GAME 3: SIMON (funcional) ===
@@ -312,6 +370,7 @@ window.addEventListener('resize', ()=>{ fw.width=innerWidth; fw.height=innerHeig
 </script>
 </body>
 </html>
+
 
 
 
