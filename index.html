@@ -89,6 +89,40 @@
     gap: 12px;
   }
 }
+  .snowflake {
+  position: fixed;
+  top: -10px;
+  color: white;
+  font-size: 20px;
+  opacity: 0.8;
+  animation: snowFall 8s linear infinite;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+@keyframes snowFall {
+  0% { transform: translateY(0) translateX(0); opacity: 1; }
+  100% { transform: translateY(110vh) translateX(30px); opacity: 0; }
+}
+
+/* ✨ Animación suave al aparecer la imagen final */
+.final-frame{
+  animation: fadeInScale 1.1s ease forwards, shine 3s infinite linear;
+  opacity: 0;
+  transform: scale(0.85);
+}
+
+@keyframes fadeInScale {
+  to{
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* 🎵 Fade-in de música */
+.fade-audio {
+  transition: volume 2.5s ease;
+}
 </style>
 </head>
 <body>
@@ -151,6 +185,19 @@
 <script>
 // --- util: show screen ---
 function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+  function startSnow(){
+  for(let i=0;i<50;i++){
+    const snow = document.createElement("div");
+    snow.classList.add("snowflake");
+    snow.textContent = "❅";
+    snow.style.left = Math.random()*100 + "vw";
+    snow.style.animationDuration = (6 + Math.random()*5) + "s";
+    snow.style.fontSize = (14 + Math.random()*10) + "px";
+    document.body.appendChild(snow);
+
+    setTimeout(()=>snow.remove(), 12000);
+  }
+}
 
 // --- fireworks (background) ---
 const fw = document.getElementById('fireworksCanvas'); const fctx = fw.getContext('2d'); fw.width = innerWidth; fw.height = innerHeight;
@@ -162,18 +209,23 @@ function loopFW(){ fctx.fillStyle='rgba(0,0,0,0.15)'; fctx.fillRect(0,0,fw.width
 // --- GAME STATE ---
 const done = {g1:false,g2:false,g3:false,g4:false};
 function checkDone(){ if(Object.values(done).every(Boolean)) show('final'); document.getElementById('finalMusic').play().catch(()=>{}); }
+  if(Object.values(done).every(Boolean)){
+    show('final');
+    startSnow();
+    fadeInMusic();
+}
 
 // === GAME 1: DARDOS (moviéndose) ===
 const canvasD = document.getElementById('dardos'); const dctx = canvasD.getContext('2d'); let targets=[]; let scoreD=0;
 function resetDardos(){ targets=[]; scoreD=0; for(let i=0;i<6;i++){targets.push({x:100+Math.random()*700,y:80+Math.random()*320,r:20+Math.random()*25, vx:(Math.random()*2-1), vy:(Math.random()*1-0.5)})} }
-canvasD.addEventListener('click', (e)=>{ const r=canvasD.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top; for(let i=targets.length-1;i>=0;i--){if(Math.hypot(targets[i].x-x,targets[i].y-y) < targets[i].r){ targets.splice(i,1); scoreD++; if(scoreD>=5){ done.g1=true; document.getElementById('toGame2').disabled=false; checkDone(); } break; } } });
+canvasD.addEventListener('pointerdown', (e)=>{ const r=canvasD.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top; for(let i=targets.length-1;i>=0;i--){if(Math.hypot(targets[i].x-x,targets[i].y-y) < targets[i].r){ targets.splice(i,1); scoreD++; if(scoreD>=5){ done.g1=true; document.getElementById('toGame2').disabled=false; checkDone(); } break; } } });
 function animD(){ dctx.clearRect(0,0,canvasD.width,canvasD.height); targets.forEach(t=>{ t.x+=t.vx*2; t.y+=Math.sin(Date.now()/600 + t.x/50)*0.6 + t.vy; if(t.x<30||t.x>canvasD.width-30) t.vx*=-1; if(t.y<30||t.y>canvasD.height-30) t.vy*=-1; dctx.beginPath(); dctx.arc(t.x,t.y,t.r,0,Math.PI*2); dctx.fillStyle='rgba(255,80,80,0.95)'; dctx.fill(); dctx.strokeStyle='white'; dctx.stroke(); }); requestAnimationFrame(animD);} resetDardos(); animD();
 
 // === GAME 2: GLOBOS (suben con zigzag) ===
 const canvasG = document.getElementById('globos'); const gctx = canvasG.getContext('2d'); let balloons=[]; let scoreG=0;
 function spawnBalloon(){ balloons.push({x:50+Math.random()*800, y:520+Math.random()*80, r:18+Math.random()*15, speed:1+Math.random()*2, phase:Math.random()*10}); }
 for(let i=0;i<10;i++) spawnBalloon();
-canvasG.addEventListener('click',(e)=>{ const r=canvasG.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top; for(let i=balloons.length-1;i>=0;i--){ if(Math.hypot(balloons[i].x-x,balloons[i].y-y) < balloons[i].r){ balloons.splice(i,1); scoreG++; if(scoreG>=10){ done.g2=true; document.getElementById('toGame3').disabled=false; checkDone(); } break; } } });
+canvasG.addEventListener('pointerdown',(e)=>{ const r=canvasG.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top; for(let i=balloons.length-1;i>=0;i--){ if(Math.hypot(balloons[i].x-x,balloons[i].y-y) < balloons[i].r){ balloons.splice(i,1); scoreG++; if(scoreG>=10){ done.g2=true; document.getElementById('toGame3').disabled=false; checkDone(); } break; } } });
 function animG(){ gctx.clearRect(0,0,canvasG.width,canvasG.height); if(Math.random()<0.01) spawnBalloon(); balloons.forEach(b=>{ b.y -= b.speed; b.x += Math.sin(b.phase + b.y/30)*1.2; b.phase += 0.02; gctx.beginPath(); gctx.ellipse(b.x,b.y,b.r,b.r*1.25,0,0,Math.PI*2); gctx.fillStyle='rgba(255,150,200,0.95)'; gctx.fill(); gctx.strokeStyle='white'; gctx.stroke(); }); requestAnimationFrame(animG);} animG();
 
 // === GAME 3: SIMON (funcional) ===
