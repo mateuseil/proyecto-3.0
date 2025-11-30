@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Parque de Atracciones — Juegos</title>
+<style>
+  html,body{height:100%;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial;background:#050119;color:#fff;overflow:hidden}
+  #fireworksCanvas{position:fixed;inset:0;z-index:-1}
+  .screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column}
+  .screen.active{display:flex}
+  .button{padding:14px 20px;border-radius:12px;border:none;background:linear-gradient(90deg,#ff6b6b,#ffd166);color:#081022;font-weight:700;cursor:pointer}
+  canvas.game{background:rgba(255,255,255,0.03);border-radius:12px;border:3px solid rgba(255,255,255,0.04)}
+  #menu h1{font-size:48px;margin:6px}
+  p.lead{color:#bcd3ffcc}
+</style>
+</head>
+<body>
+<canvas id="fireworksCanvas"></canvas>
+
+<!-- MENU -->
+<div id="menu" class="screen active">
+  <h1>🎡 Feria Interactiva</h1>
+  <p class="lead">Completa los 4 minijuegos para desbloquear la foto final</p>
+  <button id="startBtn" class="button">Empezar</button>
+</div>
+
+<!-- GAME 1: DARDOS -->
+<div id="game1" class="screen">
+  <h2>🎯 Dardos Turbo</h2>
+  <canvas id="dardos" class="game" width="900" height="480"></canvas>
+  <div style="margin-top:10px"><button id="toGame2" class="button">Siguiente</button></div>
+</div>
+
+<!-- GAME 2: GLOBOS -->
+<div id="game2" class="screen">
+  <h2>🎈 Globos Locos</h2>
+  <canvas id="globos" class="game" width="900" height="480"></canvas>
+  <div style="margin-top:10px"><button id="toGame3" class="button">Siguiente</button></div>
+</div>
+
+<!-- GAME 3: SIMON -->
+<div id="game3" class="screen">
+  <h2>🔊 Simon Extremo</h2>
+  <div id="simonBoard" style="display:flex;gap:12px;margin-top:10px"></div>
+  <div style="margin-top:10px"><button id="toGame4" class="button">Siguiente</button></div>
+</div>
+
+<!-- GAME 4: MEMORIA -->
+<div id="game4" class="screen">
+  <h2>🧠 Memoria</h2>
+  <div id="memory" style="display:grid;grid-template-columns:repeat(4,120px);gap:10px"></div>
+  <div style="margin-top:10px"><button id="showFinal" class="button">Ver final (si completado)</button></div>
+</div>
+
+<!-- FINAL -->
+<div id="final" class="screen">
+  <h1>🎆 ¡Has ganado!</h1>
+  <img id="finalImg" src="img/foto_pareja_frank.png" style="width:90%;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+</div>
+
+<script>
+// --- util: show screen ---
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+
+// --- fireworks (background) ---
+const fw = document.getElementById('fireworksCanvas'); const fctx = fw.getContext('2d'); fw.width = innerWidth; fw.height = innerHeight;
+let particles = [];
+class P{constructor(x,y,dx,dy,c,l){this.x=x;this.y=y;this.dx=dx;this.dy=dy;this.c=c;this.l=l;this.a=0;}upd(){this.x+=this.dx;this.y+=this.dy;this.dy+=0.02;this.a++;}draw(){fctx.globalAlpha=Math.max(0,1-this.a/this.l);fctx.fillStyle=this.c;fctx.fillRect(this.x,this.y,3,3);fctx.globalAlpha=1}}
+function spawnFire(x,y){ for(let i=0;i<60;i++){const a=Math.random()*Math.PI*2;particles.push(new P(x,y,Math.cos(a)*(1+Math.random()*4),Math.sin(a)*(1+Math.random()*4),`hsl(${Math.random()*360} 90% 60%)`,60+Math.random()*40)); }}
+function loopFW(){ fctx.fillStyle='rgba(0,0,0,0.15)'; fctx.fillRect(0,0,fw.width,fw.height); if(Math.random()<0.04) spawnFire(Math.random()*fw.width,Math.random()*fw.height*0.6); for(let i=particles.length-1;i>=0;i--){particles[i].upd();particles[i].draw(); if(particles[i].a>particles[i].l) particles.splice(i,1);} requestAnimationFrame(loopFW);} loopFW();
+
+// --- GAME STATE ---
+const done = {g1:false,g2:false,g3:false,g4:false};
+function checkDone(){ if(Object.values(done).every(Boolean)) show('final'); }
+
+// === GAME 1: DARDOS (moviéndose) ===
+const canvasD = document.getElementById('dardos'); const dctx = canvasD.getContext('2d'); let targets=[]; let scoreD=0;
+function resetDardos(){ targets=[]; scoreD=0; for(let i=0;i<6;i++){targets.push({x:100+Math.random()*700,y:80+Math.random()*320,r:20+Math.random()*25, vx:(Math.random()*2-1), vy:(Math.random()*1-0.5)})} }
+canvasD.addEventListener('click', (e)=>{ const r=canvasD.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top; for(let i=targets.length-1;i>=0;i--){if(Math.hypot(targets[i].x-x,targets[i].y-y) < targets[i].r){ targets.splice(i,1); scoreD++; if(scoreD>=5){ done.g1=true; document.getElementById('toGame2').disabled=false; checkDone(); } break; } } });
+function animD(){ dctx.clearRect(0,0,canvasD.width,canvasD.height); targets.forEach(t=>{ t.x+=t.vx*2; t.y+=Math.sin(Date.now()/600 + t.x/50)*0.6 + t.vy; if(t.x<30||t.x>canvasD.width-30) t.vx*=-1; if(t.y<30||t.y>canvasD.height-30) t.vy*=-1; dctx.beginPath(); dctx.arc(t.x,t.y,t.r,0,Math.PI*2); dctx.fillStyle='rgba(255,80,80,0.95)'; dctx.fill(); dctx.strokeStyle='white'; dctx.stroke(); }); requestAnimationFrame(animD);} resetDardos(); animD();
+
+// === GAME 2: GLOBOS (suben con zigzag) ===
+const canvasG = document.getElementById('globos'); const gctx = canvasG.getContext('2d'); let balloons=[]; let scoreG=0;
+function spawnBalloon(){ balloons.push({x:50+Math.random()*800, y:520+Math.random()*80, r:18+Math.random()*15, speed:1+Math.random()*2, phase:Math.random()*10}); }
+for(let i=0;i<10;i++) spawnBalloon();
+canvasG.addEventListener('click',(e)=>{ const r=canvasG.getBoundingClientRect(); const x=e.clientX-r.left, y=e.clientY-r.top; for(let i=balloons.length-1;i>=0;i--){ if(Math.hypot(balloons[i].x-x,balloons[i].y-y) < balloons[i].r){ balloons.splice(i,1); scoreG++; if(scoreG>=10){ done.g2=true; document.getElementById('toGame3').disabled=false; checkDone(); } break; } } });
+function animG(){ gctx.clearRect(0,0,canvasG.width,canvasG.height); if(Math.random()<0.01) spawnBalloon(); balloons.forEach(b=>{ b.y -= b.speed; b.x += Math.sin(b.phase + b.y/30)*1.2; b.phase += 0.02; gctx.beginPath(); gctx.ellipse(b.x,b.y,b.r,b.r*1.25,0,0,Math.PI*2); gctx.fillStyle='rgba(255,150,200,0.95)'; gctx.fill(); gctx.strokeStyle='white'; gctx.stroke(); }); requestAnimationFrame(animG);} animG();
+
+// === GAME 3: SIMON (funcional) ===
+const simonBoard = document.getElementById('simonBoard'); const colors=['#33cc33','#ff4d4d','#ffd166','#6b7bff']; let simonSeq=[], playerSeq=[]; let simonRound=0;
+function buildSimon(){ simonBoard.innerHTML=''; for(let i=0;i<4;i++){ const btn=document.createElement('div'); btn.style.width='160px'; btn.style.height='160px'; btn.style.borderRadius='18px'; btn.style.background=colors[i]; btn.style.boxShadow='0 6px 20px rgba(0,0,0,0.6)'; btn.style.cursor='pointer'; btn.dataset.i=i; btn.onclick=()=>playerPress(parseInt(btn.dataset.i)); simonBoard.appendChild(btn);} }
+function startSimon(){ simonSeq=[]; playerSeq=[]; simonRound=0; nextSimon(); }
+function nextSimon(){ playerSeq=[]; simonRound++; if(simonRound>6) { done.g3=true; document.getElementById('toGame4').disabled=false; checkDone(); return; } document.querySelector('#game3 h2').innerText = `🔊 Simon Extremo — Ronda ${simonRound}`; simonSeq.push(Math.floor(Math.random()*4)); playSeq(); }
+function playSeq(){ let i=0; const nodes = simonBoard.children; const it = setInterval(()=>{ const idx=simonSeq[i]; const node=nodes[idx]; node.style.filter='brightness(2)'; setTimeout(()=>node.style.filter='brightness(1)',350); i++; if(i>=simonSeq.length) clearInterval(it); }, 600); }
+function playerPress(i){ playerSeq.push(i); const idx = playerSeq.length-1; if(playerSeq[idx] !== simonSeq[idx]){ // fail
+  document.querySelector('#game3 h2').innerText='Fallaste — reiniciando...'; setTimeout(()=>{ startSimon(); },700); return; }
+  if(playerSeq.length === simonSeq.length) { setTimeout(()=> nextSimon(), 500); }
+}
+buildSimon(); startSimon();
+
+// === GAME 4: MEMORIA (4x4) ===
+const memRoot = document.getElementById('memory'); let memCards=[], memPairs=0, flipped=[];
+function setupMemory(){ memRoot.innerHTML=''; memPairs=0; flipped=[]; const arr=[]; for(let i=0;i<8;i++){ arr.push(i); arr.push(i); } arr.sort(()=>Math.random()-0.5); arr.forEach((v,i)=>{ const div=document.createElement('div'); div.style.width='120px'; div.style.height='120px'; div.style.background='#111'; div.style.borderRadius='12px'; div.style.display='flex'; div.style.alignItems='center'; div.style.justifyContent='center'; div.style.fontSize='40px'; div.style.cursor='pointer'; div.dataset.v=v; div.onclick=()=>flipMem(div); memRoot.appendChild(div); memCards.push(div); }); }
+function flipMem(el){ if(el.textContent||flipped.length===2) return; el.textContent = el.dataset.v; flipped.push(el); if(flipped.length===2){ if(flipped[0].dataset.v === flipped[1].dataset.v){ memPairs++; flipped=[]; if(memPairs>=8){ done.g4=true; document.getElementById('showFinal').disabled=false; checkDone(); } } else { setTimeout(()=>{ flipped.forEach(x=>x.textContent=''); flipped=[]; },700); } } }
+setupMemory();
+
+// --- BUTTON HOOKUPS ---
+document.getElementById('startBtn').addEventListener('click', ()=>{ show('game1'); });
+document.getElementById('toGame2').addEventListener('click', ()=>{ show('game2'); });
+document.getElementById('toGame3').addEventListener('click', ()=>{ show('game3'); });
+document.getElementById('toGame4').addEventListener('click', ()=>{ show('game4'); });
+document.getElementById('showFinal').addEventListener('click', ()=>{ if(Object.values(done).every(Boolean)) show('final'); else alert('Completa todos los juegos primero.'); });
+
+// enable/disable next buttons until their game is done
+['toGame2','toGame3','toGame4','showFinal'].forEach(id=>document.getElementById(id).disabled=true);
+
+// handle resize fireworks
+window.addEventListener('resize', ()=>{ fw.width=innerWidth; fw.height=innerHeight; });
+
+</script>
+</body>
+</html>
