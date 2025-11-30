@@ -13,6 +13,35 @@
   canvas.game{background:rgba(255,255,255,0.03);border-radius:12px;border:3px solid rgba(255,255,255,0.04)}
   #menu h1{font-size:48px;margin:6px}
   p.lead{color:#bcd3ffcc}
+  .final-frame{
+  padding: 14px;
+  border-radius: 18px;
+  max-width: 380px;
+  width: 90%;
+  background: linear-gradient(135deg, #d4af37, #f7e99c, #c08c22);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.7);
+  animation: shine 3s infinite linear;
+}
+
+.final-frame img{
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+}
+
+/* ANIMACIÓN DEL BRILLO DORADO */
+@keyframes shine{
+  0%{
+    filter: brightness(1);
+  }
+  50%{
+    filter: brightness(1.25);
+  }
+  100%{
+    filter: brightness(1);
+  }
+}
 </style>
 </head>
 <body>
@@ -52,11 +81,24 @@
   <div id="memory" style="display:grid;grid-template-columns:repeat(4,120px);gap:10px"></div>
   <div style="margin-top:10px"><button id="showFinal" class="button">Ver final (si completado)</button></div>
 </div>
-
 <!-- FINAL -->
-<div id="final" class="screen">
+ <div id="final" class="screen">
   <h1>🎆 ¡Has ganado!</h1>
-  <img id="finalImg" src="img/foto_pareja_frank.png" style="width:90%;border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
+
+  <audio id="finalMusic" loop></audio>
+
+  <div style="margin:15px;display:flex;gap:10px">
+    <button id="musicNext" class="button">⏭ Cambiar canción</button>
+    <button id="musicPick" class="button">🎵 Elegir canción</button>
+    <input type="file" id="musicFile" accept="audio/*" style="display:none" />
+  </div>
+
+  <!-- MARCO DORADO -->
+  <div class="final-frame">
+    <img id="finalImg"
+      src="img/foto_pareja_frank.jpg">
+  </div>
+
 </div>
 
 <script>
@@ -72,7 +114,7 @@ function loopFW(){ fctx.fillStyle='rgba(0,0,0,0.15)'; fctx.fillRect(0,0,fw.width
 
 // --- GAME STATE ---
 const done = {g1:false,g2:false,g3:false,g4:false};
-function checkDone(){ if(Object.values(done).every(Boolean)) show('final'); }
+function checkDone(){ if(Object.values(done).every(Boolean)) show('final'); document.getElementById('finalMusic').play().catch(()=>{}); }
 
 // === GAME 1: DARDOS (moviéndose) ===
 const canvasD = document.getElementById('dardos'); const dctx = canvasD.getContext('2d'); let targets=[]; let scoreD=0;
@@ -105,6 +147,42 @@ function setupMemory(){ memRoot.innerHTML=''; memPairs=0; flipped=[]; const arr=
 function flipMem(el){ if(el.textContent||flipped.length===2) return; el.textContent = el.dataset.v; flipped.push(el); if(flipped.length===2){ if(flipped[0].dataset.v === flipped[1].dataset.v){ memPairs++; flipped=[]; if(memPairs>=8){ done.g4=true; document.getElementById('showFinal').disabled=false; checkDone(); } } else { setTimeout(()=>{ flipped.forEach(x=>x.textContent=''); flipped=[]; },700); } } }
 setupMemory();
 
+// === AUDIO SYSTEM ===const finalMusic = document.getElementById('finalMusic');
+
+const trackList = [
+  '',
+  'musica/navideño.mp3'
+];
+
+let currentTrack = 0;
+
+function playTrack(i){
+  currentTrack = i % trackList.length;
+  finalMusic.src = trackList[currentTrack];
+  finalMusic.play().catch(()=>{});
+}
+
+document.getElementById('musicNext').onclick = ()=>{
+  playTrack(currentTrack + 1);
+};
+
+document.getElementById('musicPick').onclick = ()=>{
+  document.getElementById('musicFile').click();
+};
+
+document.getElementById('musicFile').onchange = (e)=>{
+  const file = e.target.files[0];
+  if(file){
+    finalMusic.src = URL.createObjectURL(file);
+    finalMusic.play();
+  }
+};
+
+// === SOUND EFFECTS ===
+function sfx(url){ const a=new Audio(url); a.volume=0.6; a.play(); }
+// attach to games
+document.addEventListener('click',()=>navigator.vibrate&&navigator.vibrate(20));
+
 // --- BUTTON HOOKUPS ---
 document.getElementById('startBtn').addEventListener('click', ()=>{ show('game1'); });
 document.getElementById('toGame2').addEventListener('click', ()=>{ show('game2'); });
@@ -121,3 +199,4 @@ window.addEventListener('resize', ()=>{ fw.width=innerWidth; fw.height=innerHeig
 </script>
 </body>
 </html>
+
